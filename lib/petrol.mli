@@ -1030,28 +1030,7 @@ module Query : sig
 end
 
 module StaticSchema : sig
-
-  (** Provides a helper interface, primarily for
-      prototyping/debugging, that declares a static table without any
-      versioning.  *)
-
-  type t
-  (** A global schema, primarily intended for testing.
-
-      See also {!VersionedSchema.t}, which is the recommended
-      alternative, especially if you expect the schema to change in
-      the future.
-
-      {b Note} A schema [t] here represents a collection of table
-      schemas but doesn't have to be an exhaustive enumeration - i.e it is
-      possible to have multiple [t] valid for a given SQL database
-      provided they refer to disjoint collections of tables. *)
-
-  val init: unit -> t
-  (** [init version ~name] constructs a new schema. *)
-
-  val declare_table : t ->
-    ?constraints:[`Table] Schema.constraint_ list ->
+  val declare_table :
     name:string -> 'a Schema.table -> table_name * 'a Expr.expr_list
   (** [declare_table t ?constraints ~name table_spec]
       declares a new table on the schema [t] with the name
@@ -1059,99 +1038,6 @@ module StaticSchema : sig
 
       [constraints] are a list of SQL constraints on the columns of
       the table. *)
-
-
-  val initialise : t -> (module Caqti_lwt.CONNECTION) ->
-    (unit, [> Caqti_error.t ]) Lwt_result.t
-    (** [initialise t conn] initialises the SQL schema on [conn]. *)
-
-end
-
-module VersionedSchema : sig
-
-  (** Provides an interface that declares a versioned schema. *)
-
-  type t
-  (** A versioned schema.
-
-      {b Note} A schema [t] here represents a collection of table
-      schemas but doesn't have to be an exhaustive enumeration - i.e it is
-      possible to have multiple [t] valid for a given SQL database
-      provided they refer to disjoint collections of tables. *)
-
-  type version = private int list
-  (** Lexiographically ordered schema version numbers  *)
-
-  type migration = (unit, unit, [`Zero]) Caqti_request.t
-  (** Represents SQL statements required to update the schema over
-      versions. *)
-
-  val version: int list -> version
-  (** [version ls] constructs a new version number from [ls]. *)
-
-  val init:
-    ?migrations:(version * migration list) list -> version -> name:string -> t
-  (** [init ?migrations dialect version ~name] constructs a new
-      versioned schema declaring it to have the name [name] and
-      version [version] using SQL dialect [dialect].
-
-      [name] is the name of the schema -- used to initially
-      determine the stored version number, and is required to stay
-      constant over the lifetime of the project. 
-
-      [version] is the current version of the schema -- note that
-      {!initialise} will fail if it is run using an SQL database has a
-      newer version than the version declared here.
-
-      [migrations] is an association list, mapping versions to the SQL
-      statements required to migrate the schema to the new format
-      from its previous version. The order of elements in [migrations]
-      is irrelevant. *)
-
-  val declare_table : t ->
-    ?since:version ->
-    ?constraints:[`Table] Schema.constraint_ list ->
-    ?migrations:(version * migration list) list ->
-    name:string -> 'a Schema.table -> table_name * 'a Expr.expr_list
-  (** [declare_table t ?since ?constraints ?migrations ~name table_spec]
-      declares a new table on the schema [t] with the name
-      [name].
-
-      [since] declares the first version in which this table was
-      introduced -- if omitted, Petrol assumes the table has been
-      present since the very first version.
-
-      [constraints] are a list of SQL constraints on the columns of
-      the table.
-
-      [migrations] is an association list, mapping versions to the SQL
-      statements required to migrate this table to the new format
-      from its previous version. The order of elements in [migrations]
-      is irrelevant.  *)
-
-  val migrations_needed : t -> (module Caqti_lwt.CONNECTION) ->
-    (bool, [> Caqti_error.t  | `Newer_version_than_supported of version ]) Lwt_result.t
-  (** [migrations_needed t conn] returns a boolean indicating whether
-      the current version on the SQL database will require migrations
-      -- i.e whether running {!initialise} will run migrations.
-
-      [migrations_needed] will also fail if it is run using an SQL
-      database has a newer version than the version declared here.
-
-      {b Note} [migrations_needed] reserves the table name
-      [petrol_<schema_name>_version_db] in the database. *)
-
-  val initialise : t -> (module Caqti_lwt.CONNECTION) ->
-    (unit, [> Caqti_error.t | `Newer_version_than_supported of version ]) Lwt_result.t
-    (** [initialise t conn] initialises the SQL database on [conn],
-        performing any necessary migrations if needed.
-
-        [initialise] will fail if it is run using an SQL database has a
-        newer version than the version declared here.
-
-        {b Note} [initialise] reserves the table name
-        [petrol_<schema_name>_version_db] in the database.  *)
-
 end
 
 val exec : (module Caqti_lwt.CONNECTION) -> (unit, [< `Zero ]) request ->

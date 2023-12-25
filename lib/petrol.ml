@@ -85,22 +85,6 @@ module Postgres = struct
 
 end
 
-
-let result_all_unit : (unit, 'e) result list -> (unit, 'e) result =
-  fun ls ->
-  let rec loop = function
-    | [] -> Ok ()
-    | Ok () :: t -> loop t
-    | Error err :: _ -> Error err in
-  loop ls
-
-
-let rec drop_while ~f ls =
-  match ls with
-  | [] -> []
-  | h :: t when f h -> drop_while ~f t
-  | ls -> ls
-
 let exec : (module Caqti_lwt.CONNECTION) ->
   (unit,[< `Zero ]) Request.t -> (unit, [> Caqti_error.call_or_retrieve ]) result Lwt.t =
   fun (module DB: Caqti_lwt.CONNECTION) ((MkCaqti (inps,req),wrapp_value): (unit,_) Request.t) ->
@@ -126,46 +110,19 @@ let collect_list : 'a . (module Caqti_lwt.CONNECTION) ->
   DB.collect_list req data
 
 module StaticSchema = struct
-
-  type wrapped_table =
-      MkTable : int * string * 'a Schema.table * [ `Table ] Schema.constraint_ list -> wrapped_table
-
-  type t = (int, wrapped_table) Hashtbl.t
-
-  let init () : t = Hashtbl.create 10
-
-  let declare_table tables ?(constraints : _ list =[]) ~name tbl =
-    List.iter Schema.ensure_table_constraint constraints;
-    let id = Hashtbl.length tables in
-    Hashtbl.add tables id (MkTable (id, name, tbl, constraints));
+  let declare_table ~name tbl =
     let rec to_table : 'a . string -> 'a Schema.table -> 'a Expr.expr_list =
       fun name (type a) (table: a Schema.table) : a Expr.expr_list ->
         match table with
         | [] -> []
         | (field_name, field_ty, _) :: rest ->
-          ((Types.FIELD ((id, name), field_name,field_ty)) : _ Expr.t)
+          ((Types.FIELD ((0, name), field_name,field_ty)) : _ Expr.t)
           :: to_table name rest in
     let table = to_table name tbl in
-    (id, name), table
-
-  let initialise tables (module DB: Caqti_lwt.CONNECTION) =
-    let open Lwt_result.Syntax in
-    let table_defs =
-      Hashtbl.fold
-        (fun _key (MkTable (_, name, table, constraints)) acc ->
-           List.cons (Schema.to_sql ~name table constraints) acc
-        ) tables ([]: 'a list) in
-    let* () = 
-      Lwt_list.map_s (fun table_def ->
-          let req = Caqti_request.Infix.(Caqti_type.unit ->. Caqti_type.unit) table_def in
-          DB.exec req ()
-        ) table_defs
-      |> Lwt.map result_all_unit in
-    Lwt_result.return ()
-
+    (0, name), table
 end
 
-
+(*
 module VersionedSchema = struct
 
   type version = int list
@@ -194,21 +151,6 @@ module VersionedSchema = struct
         compare_version vl vr) ls
   let find_migrations_to_run ~current_version ls =
     drop_while ~f:(fun (ver, _) -> compare_version ver current_version <= 0) ls
-
-  let init ?(migrations=[]) version ~name =
-    let migrations = order_by_version migrations in
-    let version_db = StaticSchema.init () in
-    let version_table_name, Expr.[version_table_field] =
-      StaticSchema.declare_table version_db ~name:("petrol_" ^ name ^ "_version_db") Schema.[
-          field ~constraints:[primary_key (); not_null ()] "version" ~ty:Type.TEXT
-        ] in
-    {
-      version;
-      tables=Hashtbl.create 10;
-      migrations;
-      version_db;
-      version_table_name; version_table_field;
-    }
 
   let declare_table t ?since ?(constraints : _ list =[]) ?(migrations=[]) ~name tbl =
     List.iter Schema.ensure_table_constraint constraints;
@@ -348,3 +290,4 @@ module VersionedSchema = struct
       Lwt.return_error (`Newer_version_than_supported current_version)
 
 end
+*)
