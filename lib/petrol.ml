@@ -8,16 +8,12 @@ module Type = struct
   let pp fmt vl = Format.fprintf fmt "%s" (show vl)
 end
 
-
 type table_name = Types.table_name
 type ('ret_ty, 'query_kind) query = ('ret_ty, 'query_kind) Types.query
 
-
 type ('res,'multiplicity) request = ('res,'multiplicity) Request.t
 
-
 module Request = Request
-
 
 module Sqlite3 = struct
 
@@ -110,7 +106,8 @@ let collect_list : 'a . (module Caqti_lwt.CONNECTION) ->
   DB.collect_list req data
 
 module StaticSchema = struct
-  let declare_table ~name tbl =
+  let declare_table ?(constraints : _ list =[]) ~name tbl =
+    List.iter Schema.ensure_table_constraint constraints;
     let rec to_table : 'a . string -> 'a Schema.table -> 'a Expr.expr_list =
       fun name (type a) (table: a Schema.table) : a Expr.expr_list ->
         match table with

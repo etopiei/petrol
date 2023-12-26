@@ -799,6 +799,8 @@ module Schema : sig
       you can use vanilla list syntax to construct terms of this
       type.  *)
 
+  val to_sql : name:string -> 'b table -> 'a constraint_ list -> string
+
   val primary_key :
     ?name:string ->
     ?ordering:[ `ASC | `DESC ] ->
@@ -1031,6 +1033,7 @@ end
 
 module StaticSchema : sig
   val declare_table :
+    ?constraints:[`Table] Schema.constraint_ list ->
     name:string -> 'a Schema.table -> table_name * 'a Expr.expr_list
   (** [declare_table t ?constraints ~name table_spec]
       declares a new table on the schema [t] with the name

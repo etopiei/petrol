@@ -287,6 +287,6 @@ let to_sql ~name table (constraints: 'a sql_constraint list) =
         (Format.pp_print_list
            ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
            pp_sql_constraint) constraints in
-  Format.sprintf "CREATE TABLE IF NOT EXISTS %s (%s)"
+  Format.sprintf "create table %s (%s)"
     name acc
 
