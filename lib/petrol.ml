@@ -39,6 +39,7 @@ module Sqlite3 = struct
     let real = Type.real
     let text = Type.text
     let bool = Type.bool
+    let null_ty = Type.null_ty
 
     include Type.Sqlite3
 
@@ -72,6 +73,7 @@ module Postgres = struct
     let real = Type.real
     let text = Type.text
     let bool = Type.bool
+    let null_ty = Type.null_ty
 
     include Type.Postgres
 
