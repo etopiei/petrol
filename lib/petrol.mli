@@ -42,6 +42,8 @@ module Type : sig
   val pp: Format.formatter -> 'a t -> unit
   val show : 'a t -> string
 
+  val null_ty : 'a. 'a t -> 'a option t
+
   val custom : ty:'a Caqti_type.t -> repr:string -> 'a t
   (** [custom ~ty ~repr] creates a new SQL type that is represented by
       the Caqti type [ty], and is represented in a SQL query as [repr].

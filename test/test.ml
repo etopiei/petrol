@@ -1,13 +1,28 @@
 open Petrol
 open Petrol.Postgres
 
-let affiliation, Expr.[id] =
+let uuid = Petrol.Type.custom ~ty:Caqti_type.string ~repr:"uuid"
+
+let affiliation, Expr.[id; _test; _referee_id] =
   StaticSchema.declare_table
     ~constraints:[Schema.table_unique ["referree_id"; "referred_id"]]
     ~name:"affiliation"
     Schema.[
       field "id" ~ty:Type.int ~constraints:[primary_key ()];
+      field "test" ~ty:Type.text ~constraints:[primary_key ()];
+      field "referee_id" ~ty:uuid ~constraints:[not_null ()]
     ]
+
+let () =
+  Schema.to_sql
+    ~name:"affiliation"
+    Schema.[
+      field "id" ~ty:Type.int ~constraints:[primary_key ()];
+      field "test" ~ty:Type.text ~constraints:[primary_key ()];
+      field "referee_id" ~ty:uuid ~constraints:[not_null ()]
+    ]
+    [Schema.table_unique ["referree_id"; "referred_id"]]
+  |> print_endline
 
 let test_find_affiliation () =
   let query gt = Query.select ~from:affiliation [id]
