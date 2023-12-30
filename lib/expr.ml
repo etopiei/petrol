@@ -73,6 +73,11 @@ module Common = struct
   let (/.) l r = Types.Common.DIV (Type.Numeric.Real, l, r)
   let ( *. ) l r = Types.Common.MUL (Type.Numeric.Real, l, r)
 
+  let ( +! ) l r = Types.Common.POLY_ADD (l, r)
+  let ( -! ) l r = Types.Common.POLY_SUB (l, r)
+  let ( *! ) l r = Types.Common.POLY_MUL (l, r)
+  let ( /! ) l r = Types.Common.POLY_DIV (l, r)
+
   let (=) l r = Types.Common.COMPARE (EQ, l, r)
   let (<>) l r = Types.Common.COMPARE (NEQ, l, r)
   let (<=) l r = Types.Common.COMPARE (LE, l, r)
@@ -117,6 +122,10 @@ module Common = struct
   let lower s = Types.Common.LOWER s
   let upper s = Types.Common.UPPER s
 
+  let ( <== ) = fun (type a) (x : a t) (v : a) ->
+    let a = ty_expr x in
+    let (vl : a t) = vl ~ty:a v in
+    x := vl
 end
 
 module Postgres = struct
@@ -222,6 +231,9 @@ module Postgres = struct
   let least_gen ~ty  x = Types.Postgres.LEAST (ty, x)
 
   let random = Types.Postgres.RANDOM
+
+  let current_timestamp = Types.Postgres.CURRENT_TIMESTAMP
+  let interval str = Types.Postgres.INTERVAL str
 
 end
 

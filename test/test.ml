@@ -1,16 +1,27 @@
 open Petrol
 open Petrol.Postgres
 
+type affiliation =
+  { id   : int
+  ; test : string
+  }
+
+let () =
+  let a = { id=3; test="3" } in
+  ignore (a.id, a.test);
+  Out_channel.(flush stdout)
+
 let uuid = Petrol.Type.custom ~ty:Caqti_type.string ~repr:"uuid"
 
-let affiliation, Expr.[id; _test; _referee_id] =
+let affiliation, Expr.[id; test; _referee_id; time] =
   StaticSchema.declare_table
     ~constraints:[Schema.table_unique ["referree_id"; "referred_id"]]
     ~name:"affiliation"
     Schema.[
       field "id" ~ty:Type.int ~constraints:[primary_key ()];
-      field "test" ~ty:Type.text ~constraints:[primary_key ()];
-      field "referee_id" ~ty:uuid ~constraints:[not_null ()]
+      field "test" ~ty:(Type.null_ty Type.text) ~constraints:[primary_key ()];
+      field "referee_id" ~ty:uuid ~constraints:[not_null ()];
+      field "time" ~ty:Type.time ~constraints:[not_null ()]
     ]
 
 let () =
@@ -26,9 +37,17 @@ let () =
 
 let test_find_affiliation () =
   let query gt = Query.select ~from:affiliation [id]
-    |> Query.where Expr.(id > i gt)
+    |> Query.where Expr.((id > i gt) && (test = s_opt None))
   in
 
+  let update_query =
+    Query.update ~table:affiliation
+      ~set:Expr.[time := current_timestamp +! interval "1 hour"]
+  in
+
+  (Format.asprintf "%a" Query.pp (update_query))
+  |> print_endline;
+  
   let _request ~a db =
     query a
     |> Request.make_one

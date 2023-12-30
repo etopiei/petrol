@@ -1,3 +1,4 @@
 (test
  (name test)
- (libraries alcotest petrol))
+ (libraries alcotest petrol)
+ (preprocess (pps ppx_petrol)))

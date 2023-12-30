@@ -20,6 +20,8 @@ module Expr : sig
   (** An opaque wrapper that represents an assignment of a value to a
       particular field in a table.  *)
 
+  val ty_expr : 'a t -> 'a Type.t
+
   (** Represents a heterogeneous sequence of SQL expressions. *)
   type 'a expr_list =
     | [] : unit expr_list
@@ -500,6 +502,8 @@ module Postgres : sig
     (** An opaque wrapper that represents an assignment of a value to a
         particular field in a table.  *)
 
+    val ( <== ) : 'a t -> 'a -> wrapped_assign
+
     (** {1 Constants}*)
 
     (** The following functions define constant value expressions.
@@ -609,6 +613,10 @@ module Postgres : sig
     val ( *. ) : float t -> float t -> float t
     val ( /. ) : float t -> float t -> float t
 
+    val ( +! ) : 'a t -> 'b t -> 'a t
+    val ( -! ) : 'a t -> 'b t -> 'a t
+    val ( /! ) : 'a t -> 'b t -> 'a t
+    val ( *! ) : 'a t -> 'b t -> 'a t
 
     val ( = ) : 'a t -> 'a t -> bool t
     val ( <> ) : 'a t -> 'a t -> bool t
@@ -760,6 +768,9 @@ module Postgres : sig
     val least : int t list -> int t
     val leastf : float t list -> float t
     val least_gen : ty:'a Type.Numeric.t -> 'a t list -> 'a t
+
+    val current_timestamp : Ptime.t t
+    val interval : string -> Ptime.t t
 
     (* val max_of : int t list -> int t *)
 

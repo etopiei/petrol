@@ -376,6 +376,11 @@ module Common = struct
     | DIV : 'a Type.Numeric.t * 'a expr * 'a expr -> 'a expr
     | ABS : 'a Type.Numeric.t * 'a expr -> 'a expr
 
+    | POLY_ADD : 'a expr * 'b expr -> 'a expr
+    | POLY_SUB : 'a expr * 'b expr -> 'a expr
+    | POLY_MUL : 'a expr * 'b expr -> 'a expr
+    | POLY_DIV : 'a expr * 'b expr -> 'a expr
+
     | MOD : 'a Type.Numeric.integral * 'a expr * 'a expr -> 'a expr
     | LAND : 'a Type.Numeric.integral * 'a expr * 'a expr -> 'a expr
     | LOR : 'a Type.Numeric.integral * 'a expr * 'a expr -> 'a expr
@@ -389,7 +394,6 @@ module Common = struct
 
     | IS_NOT_NULL: 'a expr -> bool expr
     | IS_NULL: 'a expr -> bool expr
-
 
     | LOWER: string expr -> string expr
     | UPPER: string expr -> string expr
@@ -435,6 +439,11 @@ module Common = struct
       | MOD (_, l, r) -> Format.fprintf fmt "MOD(%a,%a)" pp_expr l pp_expr r
       | LAND (_, l, r) -> Format.fprintf fmt "(%a) & (%a)" pp_expr l pp_expr r
       | LOR (_, l, r) -> Format.fprintf fmt "(%a) | (%a)" pp_expr l pp_expr r
+
+      | POLY_ADD (l, r) -> Format.fprintf fmt "(%a) + (%a)" pp_expr l pp_expr r
+      | POLY_SUB (l, r) -> Format.fprintf fmt "(%a) - (%a)" pp_expr l pp_expr r
+      | POLY_MUL (l, r) -> Format.fprintf fmt "(%a) * (%a)" pp_expr l pp_expr r
+      | POLY_DIV (l, r) -> Format.fprintf fmt "(%a) / (%a)" pp_expr l pp_expr r
 
       | AND (l, r) -> Format.fprintf fmt "(%a) AND (%a)" pp_expr l pp_expr r
       | OR (l, r) -> Format.fprintf fmt "(%a) OR (%a)" pp_expr l pp_expr r
@@ -506,6 +515,11 @@ module Common = struct
       | LAND  (_, l, r) -> values_expr (values_expr acc l) r
       | LOR  (_, l, r) -> values_expr (values_expr acc l) r
 
+      | POLY_ADD (l, r) -> values_expr (values_expr acc l) r
+      | POLY_SUB (l, r) -> values_expr (values_expr acc l) r
+      | POLY_MUL (l, r) -> values_expr (values_expr acc l) r
+      | POLY_DIV (l, r) -> values_expr (values_expr acc l) r
+
       | OR (l, r)
       | AND (l, r) ->
         values_expr (values_expr acc l) r
@@ -559,6 +573,11 @@ module Common = struct
       | MOD (_, l, _) -> ty_expr l
       | LAND (_, l, _) -> ty_expr l
       | LOR (_, l, _) -> ty_expr l
+
+      | POLY_ADD (l, _) -> ty_expr l
+      | POLY_SUB (l, _) -> ty_expr l
+      | POLY_MUL (l, _) -> ty_expr l
+      | POLY_DIV (l, _) -> ty_expr l
 
       | AND _ -> Type.bool
       | OR _ -> Type.bool
@@ -670,6 +689,9 @@ module Postgres = struct
 
     | RANDOM: float expr
 
+    | CURRENT_TIMESTAMP : Ptime.t expr
+    | INTERVAL : string -> Ptime.t expr
+
   let () = add_printer @@ fun pp -> {
     pp_expr=fun (type a) fmt (e: a expr) : unit ->
       match e with 
@@ -779,6 +801,9 @@ module Postgres = struct
 
       | RANDOM -> Format.fprintf fmt "RANDOM()"
 
+      | CURRENT_TIMESTAMP -> Format.fprintf fmt "CURRENT_TIMESTAMP"
+      | INTERVAL expr -> Format.fprintf fmt "INTERVAL '%s'" expr
+
       | _ -> pp.pp_expr fmt e
   }
 
@@ -882,6 +907,9 @@ module Postgres = struct
 
       | RANDOM -> acc
 
+      | CURRENT_TIMESTAMP -> acc
+      | INTERVAL _ -> acc
+
       | _ -> collector.values_expr acc e
   }
 
@@ -973,6 +1001,9 @@ module Postgres = struct
       | LEAST (_,[]) -> failwith "invalid syntax -- empty LEAST expression"
 
       | RANDOM -> Type.REAL
+
+      | CURRENT_TIMESTAMP -> Type.Postgres.time
+      | INTERVAL _ -> Type.Postgres.time
 
       | _ -> typer.ty_expr e
   }

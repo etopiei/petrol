@@ -29,3 +29,16 @@
  )
  (tags
   (sql)))
+
+(package
+ (name ppx_petrol)
+ (synopsis "Petrol's an OCaml SQL API made to go FAST")
+ (description "Petrol is an typed embedding of SQL into OCaml integrated with Caqti and support for versioning.")
+ (depends
+  (ocaml (>= 4.12))
+  (dune (>= 3.3))
+  ppxlib
+  petrol
+ )
+ (tags
+  (sql)))
