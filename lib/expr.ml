@@ -223,6 +223,8 @@ module Postgres = struct
   let similar_to ~pat x = Types.Postgres.SIMILAR_TO (x, pat)
   (* args(string, pattern) *)
 
+  let word_similarity x y = Types.Postgres.WORD_SIMILARITY (x, y)
+
   let greatest x = Types.Postgres.GREATEST (Type.Numeric.Int, x)
   let greatestf x = Types.Postgres.GREATEST (Type.Numeric.Real, x)
   let greatest_gen ~ty x = Types.Postgres.GREATEST (ty, x)

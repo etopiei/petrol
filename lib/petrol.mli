@@ -741,6 +741,8 @@ module Postgres : sig
 
     val similar_to : pat:string t -> string t -> bool t
 
+    val word_similarity : string t -> string t -> float t
+
     (** {1 Aggregate Functions} *)
 
     val count : ?distinct:bool -> 'a expr_list -> int t

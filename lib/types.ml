@@ -684,6 +684,8 @@ module Postgres = struct
 
     | SIMILAR_TO: string expr * string expr -> bool expr (* args(string, pattern) *)
 
+    | WORD_SIMILARITY: string expr * string expr -> float expr
+
     | GREATEST: 'a Type.Numeric.t * 'a expr list -> 'a expr
     | LEAST: 'a Type.Numeric.t * 'a expr list -> 'a expr
 
@@ -789,6 +791,8 @@ module Postgres = struct
       | STARTS_WITH (text,prefix) -> Format.fprintf fmt "STARTS_WITH(%a,%a)" pp_expr text pp_expr prefix
 
       | SIMILAR_TO (text,pat) -> Format.fprintf fmt "(%a) SIMILAR TO (%a)" pp_expr text pp_expr pat
+
+      | WORD_SIMILARITY (x, y) -> Format.fprintf fmt "word_similarity(%a, %a)" pp_expr x pp_expr y
 
       | GREATEST (_, exprs) ->
         Format.fprintf fmt "GREATEST(%a)"
@@ -899,6 +903,8 @@ module Postgres = struct
       | SIMILAR_TO (text,pat) ->
         values_expr (values_expr acc text) pat
 
+      | WORD_SIMILARITY (x, y) ->
+        values_expr (values_expr acc x) y
 
       | GREATEST (_, exprs) ->
         List.fold_left (fun acc expr -> values_expr acc expr) acc exprs
@@ -992,6 +998,7 @@ module Postgres = struct
       | REVERSE _ -> Type.TEXT
       | STARTS_WITH (_,_) -> Type.bool
       | SIMILAR_TO (_,_) -> Type.bool
+      | WORD_SIMILARITY (_,_) -> Type.real
 
 
       | GREATEST (_, expr :: _) -> ty_expr expr
