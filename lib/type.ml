@@ -1,7 +1,7 @@
 type (_,_) eq = Refl: ('a,'a) eq
 
 type 'a witness = ..
-type 'a eq_witness = {eq: 'b . 'b witness -> ('a, 'b) eq option }
+type 'a eq_witness = { eq: 'b . 'b witness -> ('a, 'b) eq option }
 type 'a t = 
   | NULLABLE: 'a t -> 'a option t
   | INTEGER : int t

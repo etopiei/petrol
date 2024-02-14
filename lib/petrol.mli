@@ -29,9 +29,12 @@ module Expr : sig
     | [] : unit expr_list
     | (::) : ('a t * 'b expr_list) -> ('a * 'b) expr_list
 
-  type _ order_list =
-    | [] : unit order_list
-    | (::) : ((ordering * 'a t) * 'b order_list) -> ('a * 'b) order_list
+  module Order : sig
+    type 'a t' = 'a t
+    type 'a t =
+      | [] : unit t
+      | (::) : ((ordering * 'a t') * 'b t) -> unit t
+  end
 
   val pp_expr_list : Format.formatter -> 'a expr_list -> unit
   (** [pp_expr_list fmt exps] pretty prints the expression list [exps]
@@ -1053,8 +1056,8 @@ module Query : sig
       ORDER BY {direction} {fields}].  *)
 
   val order_by_
-    : 'a 'b 'c.
-      'c Expr.order_list ->
+    : 'a 'b.
+      unit Expr.Order.t ->
       ('a, [< `SELECT | `SELECT_CORE ] as 'b) t -> ('a, [> `SELECT ]) t
     (** [order_by_ ?direction fields expr] corresponds to the SQL
         [{expr} ORDER BY {direction} {fields}]. (In contrast to

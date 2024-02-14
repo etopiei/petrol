@@ -6,6 +6,7 @@ type affiliation =
   ; test : string
   }
 
+
 let () =
   let a = { id=3; test="3" } in
   ignore (a.id, a.test);
@@ -13,7 +14,7 @@ let () =
 
 let uuid = Petrol.Type.custom ~ty:Caqti_type.string ~repr:"uuid"
 
-let affiliation, Expr.[id; test; _referee_id; time] =
+let affiliation, Expr.[id; _test; _referee_id; time] =
   StaticSchema.declare_table
     ~constraints:[Schema.table_unique ["referree_id"; "referred_id"]]
     ~name:"affiliation"
@@ -63,7 +64,9 @@ let test_find_affiliation () =
 
 let test_order_by () =
   let query = Query.select ~from:affiliation [id]
-    |> Query.order_by_ [`ASC, id; `DESC, test; `ASC, time] in
+    |> Query.order_by ~direction:`ASC id
+    |> Query.order_by ~direction:`DESC time
+  in
 
   let query_str = Format.asprintf "%a" Query.pp query in
   

@@ -35,15 +35,17 @@ let pp_opt f fmt = function
 
 type 'a field = table_name * string * 'a Type.t
 
-and 'a expr = .. 
+type 'a expr = .. 
+
+module Order = struct
+  type 'a t =
+    | [] : unit t
+    | (::) : ((ordering * 'a expr) * 'b t) -> unit t
+end
 
 type 'a expr_list =
   | [] : unit expr_list
   | (::) : ('a expr * 'b expr_list) -> ('a * 'b) expr_list
-
-type 'a order_list =
-  | [] : unit order_list
-  | (::) : ((ordering * 'a expr) * 'b order_list) -> ('a * 'b) order_list
 
 and wrapped_assign = ASSIGN : 'a field * 'a expr -> wrapped_assign
 and (_, !'res) query =
@@ -57,7 +59,7 @@ and (_, !'res) query =
     } -> ('a, [> `SELECT_CORE] as 'res) query
   | SELECT : {
       core: ('a, [< `SELECT_CORE ]) query;
-      order_by: 'e order_list option;
+      order_by: unit Order.t option;
       limit: int expr option;
       offset: int expr option
     } -> ('a, [> `SELECT] as 'res) query
@@ -198,7 +200,7 @@ and pp_returning : 'a. Format.formatter -> 'a expr_list -> unit =
     pp_opt_expr_list
       (fun fmt -> Format.fprintf fmt "RETURNING %a" pp_expr_list) fmt
 
-and pp_order_list_inner : type a. Format.formatter -> a order_list -> unit = fun fmt ->
+and pp_order_list_inner : type a. Format.formatter -> a Order.t -> unit = fun fmt ->
   function
   | [] -> ()
   | (ordering, expr) :: tl ->
@@ -206,7 +208,7 @@ and pp_order_list_inner : type a. Format.formatter -> a order_list -> unit = fun
       pp_expr expr pp_ordering ordering
       pp_order_list_inner tl
 
-and pp_order_list : type a. Format.formatter -> a order_list -> unit = fun fmt ->
+and pp_order_list : type a. Format.formatter -> a Order.t -> unit = fun fmt ->
   function
   | [] -> ()
   | (ordering, expr) :: tl ->
@@ -321,7 +323,7 @@ let rec values_expr_list :
   match exprs with
   | [] -> acc
   | h :: t -> values_expr_list (values_expr acc h) t
-and values_order_list : type a. wrapped_value list -> a order_list -> wrapped_value list =
+and values_order_list : type a. wrapped_value list -> a Order.t -> wrapped_value list =
   fun acc -> function
   | [] -> acc
   | (_, expr) :: tl -> values_order_list (values_expr acc expr) tl
