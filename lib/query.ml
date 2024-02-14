@@ -199,24 +199,23 @@ let order_by :
   fun (type a b) ?(direction=`ASC) field (table: (a, b) t) : (a, [> `SELECT]) t ->
   match table with
   | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=None; order_by=Some (direction,Expr.[field])}
+      SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=None; order_by=Some [direction, field]}
   | Types.SELECT { core; order_by=_; limit; offset } ->
-    SELECT { core; order_by= Some(direction,Expr.[field]); limit; offset }
+    SELECT { core; order_by=Some [direction, field]; limit; offset }
   | DELETE _
   | UPDATE _
   | INSERT _
   | TABLE _ -> invalid_arg "order by only supported for select"
 
 let order_by_ :
-  'a 'b. ?direction:[ `ASC | `DESC ] ->
-  'c Types.expr_list -> ('a, [< `SELECT | `SELECT_CORE] as 'b) t ->
+  'a 'b. 'c Types.order_list -> ('a, [< `SELECT | `SELECT_CORE] as 'b) t ->
   ('a, [> `SELECT ]) t =
-  fun (type a b) ?(direction=`ASC) field (table: (a, b) t) : (a, [> `SELECT]) t ->
+  fun (type a b) order_list (table: (a, b) t) : (a, [> `SELECT]) t ->
   match table with
   | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=None; order_by=Some (direction,field)}
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=None; order_by=Some order_list}
   | Types.SELECT { core; order_by=_; limit; offset } ->
-    SELECT { core; order_by= Some(direction,field); limit; offset }
+    SELECT { core; order_by= Some order_list; limit; offset }
   | DELETE _
   | UPDATE _
   | INSERT _

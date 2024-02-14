@@ -35,9 +35,10 @@ let () =
     [Schema.table_unique ["referree_id"; "referred_id"]]
   |> print_endline
 
+  (*
 let test_find_affiliation () =
   let query gt = Query.select ~from:affiliation [id]
-    |> Query.where Expr.((id > i gt) && (test = s_opt None))
+    |> Query.where Expr.((id > i gt) && (test = s_opt None) && ((word_similarity (s "a") (s "b") = f 1.0)))
   in
 
   let update_query =
@@ -58,11 +59,23 @@ let test_find_affiliation () =
     "same string"
     (Format.asprintf "%a" Query.pp (query 3))
     "SELECT affiliation.id\nFROM affiliation\nWHERE affiliation.id > ?"
+  *)
+
+let test_order_by () =
+  let query = Query.select ~from:affiliation [id]
+    |> Query.order_by_ [`ASC, id; `DESC, test; `ASC, time] in
+
+  let query_str = Format.asprintf "%a" Query.pp query in
+  
+  Alcotest.(check string)
+    "same"
+    query_str
+    "SELECT affiliation.id\nFROM affiliation\nORDER BY affiliation.id ASC, affiliation.test DESC, affiliation.time ASC"
 
 let () =
   let open Alcotest in
   run "Queries" [
       "affiliation table", [
-          test_case "find_affiliation" `Quick test_find_affiliation;
+          test_case "find_affiliation" `Quick test_order_by;
         ];
     ]

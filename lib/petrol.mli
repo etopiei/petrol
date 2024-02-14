@@ -22,10 +22,16 @@ module Expr : sig
 
   val ty_expr : 'a t -> 'a Type.t
 
+  type ordering = [`ASC | `DESC]
+
   (** Represents a heterogeneous sequence of SQL expressions. *)
-  type 'a expr_list =
+  type _ expr_list =
     | [] : unit expr_list
     | (::) : ('a t * 'b expr_list) -> ('a * 'b) expr_list
+
+  type _ order_list =
+    | [] : unit order_list
+    | (::) : ((ordering * 'a t) * 'b order_list) -> ('a * 'b) order_list
 
   val pp_expr_list : Format.formatter -> 'a expr_list -> unit
   (** [pp_expr_list fmt exps] pretty prints the expression list [exps]
@@ -1047,8 +1053,9 @@ module Query : sig
       ORDER BY {direction} {fields}].  *)
 
   val order_by_
-    : ?direction:[ `ASC | `DESC ] -> 'a Expr.expr_list
-    -> ('b, [< `SELECT | `SELECT_CORE ]) t -> ('b, [> `SELECT ]) t
+    : 'a 'b 'c.
+      'c Expr.order_list ->
+      ('a, [< `SELECT | `SELECT_CORE ] as 'b) t -> ('a, [> `SELECT ]) t
     (** [order_by_ ?direction fields expr] corresponds to the SQL
         [{expr} ORDER BY {direction} {fields}]. (In contrast to
         {!Petrol.Query.order_by}, this function allows passing a list

@@ -5,6 +5,9 @@ type comparison = EQ | NEQ
                 | LT | LE
 
 type join_op = LEFT | RIGHT | INNER 
+
+type ordering = [ `ASC | `DESC ]
+
 let pp_join_op fmt = function
   | LEFT -> Format.fprintf fmt "LEFT JOIN"
   | RIGHT -> Format.fprintf fmt "RIGHT JOIN"
@@ -32,11 +35,16 @@ let pp_opt f fmt = function
 
 type 'a field = table_name * string * 'a Type.t
 
+and 'a expr = .. 
+
 type 'a expr_list =
   | [] : unit expr_list
   | (::) : ('a expr * 'b expr_list) -> ('a * 'b) expr_list
 
-and 'a expr = .. 
+type 'a order_list =
+  | [] : unit order_list
+  | (::) : ((ordering * 'a expr) * 'b order_list) -> ('a * 'b) order_list
+
 and wrapped_assign = ASSIGN : 'a field * 'a expr -> wrapped_assign
 and (_, !'res) query =
     | SELECT_CORE : {
@@ -49,7 +57,7 @@ and (_, !'res) query =
     } -> ('a, [> `SELECT_CORE] as 'res) query
   | SELECT : {
       core: ('a, [< `SELECT_CORE ]) query;
-      order_by: ([`ASC | `DESC] * 'e expr_list) option;
+      order_by: 'e order_list option;
       limit: int expr option;
       offset: int expr option
     } -> ('a, [> `SELECT] as 'res) query
@@ -190,19 +198,21 @@ and pp_returning : 'a. Format.formatter -> 'a expr_list -> unit =
     pp_opt_expr_list
       (fun fmt -> Format.fprintf fmt "RETURNING %a" pp_expr_list) fmt
 
-and pp_ordering_expr_list_inner : 'a . [> `ASC | `DESC] -> Format.formatter -> 'a expr_list -> unit =
-  fun ordering fmt (type a) (ls: a expr_list) -> match ls with
-    | [] -> ()
-    | h :: t -> Format.fprintf fmt ", %a %a%a"
-                  pp_expr h pp_ordering ordering
-                  (pp_ordering_expr_list_inner ordering) t
+and pp_order_list_inner : type a. Format.formatter -> a order_list -> unit = fun fmt ->
+  function
+  | [] -> ()
+  | (ordering, expr) :: tl ->
+    Format.fprintf fmt ", %a %a%a"
+      pp_expr expr pp_ordering ordering
+      pp_order_list_inner tl
 
-and pp_ordering_expr_list : 'a . [> `ASC | `DESC] -> Format.formatter -> 'a expr_list -> unit =
-  fun ordering fmt (type a) (ls: a expr_list) -> match ls with
-    | [] -> ()
-    | h :: t -> Format.fprintf fmt "%a %a%a"
-                  pp_expr h pp_ordering ordering
-                  (pp_ordering_expr_list_inner ordering) t
+and pp_order_list : type a. Format.formatter -> a order_list -> unit = fun fmt ->
+  function
+  | [] -> ()
+  | (ordering, expr) :: tl ->
+    Format.fprintf fmt "%a %a%a"
+      pp_expr expr pp_ordering ordering
+      pp_order_list_inner tl
 
 and pp_query: 'a 'b. Format.formatter ->
   ('a, 'b) query -> unit =
@@ -228,9 +238,9 @@ and pp_query: 'a 'b. Format.formatter ->
    | SELECT { core; order_by; limit; offset } ->
      Format.fprintf fmt "%a%a%a%a"
        pp_query core
-       (pp_opt (fun fmt (order,vl) ->
+       (pp_opt (fun fmt xs ->
           Format.fprintf fmt "ORDER BY %a"
-            (pp_ordering_expr_list order) vl))
+            pp_order_list xs))
        order_by
        (pp_opt (fun fmt vl ->
           Format.fprintf fmt "LIMIT %a" pp_expr vl))
@@ -311,6 +321,10 @@ let rec values_expr_list :
   match exprs with
   | [] -> acc
   | h :: t -> values_expr_list (values_expr acc h) t
+and values_order_list : type a. wrapped_value list -> a order_list -> wrapped_value list =
+  fun acc -> function
+  | [] -> acc
+  | (_, expr) :: tl -> values_order_list (values_expr acc expr) tl
 and query_values : 'a 'b. wrapped_value list -> ('a,'b) query -> wrapped_value list =
   fun acc (type a b) (query: (a,b) query) ->
   match query with
@@ -327,8 +341,7 @@ and query_values : 'a 'b. wrapped_value list -> ('a,'b) query -> wrapped_value l
     acc
   | SELECT { core; order_by; limit; offset } ->
     let acc = query_values acc core in
-    let acc = Option.map (fun (_, expr) -> values_expr_list acc expr) order_by
-              |> Option.value ~default:acc in
+    let acc = Option.map (values_order_list acc) order_by |> Option.value ~default:acc in
     let acc = Option.map (values_expr acc) limit |> Option.value ~default:acc in
     let acc = Option.map (values_expr acc) offset |> Option.value ~default:acc in
     acc

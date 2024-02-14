@@ -1,8 +1,14 @@
 type 'a t = 'a Types.expr
 
+type ordering = Types.ordering
+
 type 'a expr_list = 'a Types.expr_list =
   | [] : unit expr_list
   | (::) : ('a t * 'b expr_list) -> ('a * 'b) expr_list
+
+type 'a order_list = 'a Types.order_list =
+  | [] : unit order_list
+  | (::) : ((ordering * 'a t) * 'b order_list) -> ('a * 'b) order_list
 
 type wrapped_assign = Types.wrapped_assign
 
