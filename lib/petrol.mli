@@ -513,6 +513,8 @@ module Postgres : sig
 
     val ( <== ) : 'a t -> 'a -> wrapped_assign
 
+    val jsonb_has_string : 'a t -> 'a t -> bool t
+
     (** {1 Constants}*)
 
     (** The following functions define constant value expressions.

@@ -141,8 +141,11 @@ end
 module Postgres = struct
   include Common
 
+
   let between_symmetric ~lower ~upper x = Types.Postgres.BETWEEN_SYMMETRIC (x,lower,upper)
   let not_between_symmetric ~lower ~upper x = Types.Postgres.NOT_BETWEEN_SYMMETRIC (x,lower,upper)
+
+  let jsonb_has_string x y = Types.Postgres.JSONB_HAS_STRING (x, y)
 
   let is_distinct_from x y = Types.Postgres.IS_DISTINCT_FROM (x,y)
   let is_not_distinct_from x y = Types.Postgres.IS_NOT_DISTINCT_FROM (x,y)

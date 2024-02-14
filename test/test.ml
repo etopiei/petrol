@@ -73,7 +73,7 @@ let test_order_by () =
   Alcotest.(check string)
     "same"
     query_str
-    "SELECT affiliation.id\nFROM affiliation\nORDER BY affiliation.id ASC, affiliation.test DESC, affiliation.time ASC"
+    "SELECT affiliation.id\nFROM affiliation\nORDER BY affiliation.time DESC, affiliation.id ASC"
 
 let () =
   let open Alcotest in

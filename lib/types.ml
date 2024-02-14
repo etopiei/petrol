@@ -625,6 +625,7 @@ end
 module Postgres = struct
 
   type 'a expr +=
+    | JSONB_HAS_STRING : 'a expr * 'a expr -> bool expr
 
     | BETWEEN_SYMMETRIC : 'a expr * 'a expr * 'a expr -> bool expr
     | NOT_BETWEEN_SYMMETRIC : 'a expr * 'a expr * 'a expr -> bool expr
@@ -712,7 +713,8 @@ module Postgres = struct
   let () = add_printer @@ fun pp -> {
     pp_expr=fun (type a) fmt (e: a expr) : unit ->
       match e with 
-
+      | JSONB_HAS_STRING (a, b) ->
+        Format.fprintf fmt "%a ? %a" pp_expr a pp_expr b
       | BETWEEN_SYMMETRIC (expr, lower, upper) ->
         Format.fprintf fmt "%a BETWEEN SYMMETRIC %a AND %a" pp_expr expr pp_expr lower pp_expr upper
       | NOT_BETWEEN_SYMMETRIC (expr, lower, upper) ->
@@ -829,6 +831,8 @@ module Postgres = struct
   let () = add_collector @@ fun collector -> {
     values_expr=fun (type a) acc (e: a expr) : wrapped_value list ->
       match e with 
+      | JSONB_HAS_STRING (a, b) ->
+        values_expr (values_expr acc a) b
       | BETWEEN_SYMMETRIC (expr, lower, upper) ->
         values_expr (values_expr (values_expr acc expr) lower) upper
       | NOT_BETWEEN_SYMMETRIC (expr, lower, upper) ->
@@ -937,6 +941,8 @@ module Postgres = struct
   let () = add_typer @@ fun typer -> {
     ty_expr=fun (type a) (e: a expr) : a Type.t ->
       match e with
+      | JSONB_HAS_STRING (_, _) -> Type.bool
+
       | BETWEEN_SYMMETRIC (_, _, _) -> Type.bool
       | NOT_BETWEEN_SYMMETRIC (_, _, _) -> Type.bool
 
