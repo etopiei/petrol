@@ -724,9 +724,11 @@ module Postgres : sig
     val absf : float t -> float t
     val abs_gen : 'a Type.Numeric.t -> 'a t -> 'a t
 
-    (** {1 String functiosn}*)
+    (** {JSONB functions} *)
 
-    val (??) : 'a t -> string t -> bool t
+    val jsonb_exists : 'a t -> string t -> bool t
+
+    (** {1 String functions}*)
 
     val concat : string t list -> string t
 

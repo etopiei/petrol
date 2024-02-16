@@ -626,6 +626,7 @@ module Postgres = struct
 
   type 'a expr +=
     | BOOL_OP : string * 'a expr * 'b expr -> bool expr
+    | BOOL_FN : string * 'a expr * 'b expr -> bool expr
 
     | BETWEEN_SYMMETRIC : 'a expr * 'a expr * 'a expr -> bool expr
     | NOT_BETWEEN_SYMMETRIC : 'a expr * 'a expr * 'a expr -> bool expr
@@ -715,6 +716,8 @@ module Postgres = struct
       match e with 
       | BOOL_OP (op, a, b) ->
         Format.fprintf fmt "%a %s %a" pp_expr a op pp_expr b
+      | BOOL_FN (fn, a, b) ->
+        Format.fprintf fmt "%s(%a, %a)" fn pp_expr a pp_expr b
       | BETWEEN_SYMMETRIC (expr, lower, upper) ->
         Format.fprintf fmt "%a BETWEEN SYMMETRIC %a AND %a" pp_expr expr pp_expr lower pp_expr upper
       | NOT_BETWEEN_SYMMETRIC (expr, lower, upper) ->
@@ -833,6 +836,8 @@ module Postgres = struct
       match e with 
       | BOOL_OP (_, a, b) ->
         values_expr (values_expr acc a) b
+      | BOOL_FN (_, a, b) ->
+        values_expr (values_expr acc a) b
       | BETWEEN_SYMMETRIC (expr, lower, upper) ->
         values_expr (values_expr (values_expr acc expr) lower) upper
       | NOT_BETWEEN_SYMMETRIC (expr, lower, upper) ->
@@ -942,6 +947,7 @@ module Postgres = struct
     ty_expr=fun (type a) (e: a expr) : a Type.t ->
       match e with
       | BOOL_OP (_, _, _) -> Type.bool
+      | BOOL_FN (_, _, _) -> Type.bool
 
       | BETWEEN_SYMMETRIC (_, _, _) -> Type.bool
       | NOT_BETWEEN_SYMMETRIC (_, _, _) -> Type.bool
