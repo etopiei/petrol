@@ -513,8 +513,6 @@ module Postgres : sig
 
     val ( <== ) : 'a t -> 'a -> wrapped_assign
 
-    val jsonb_has_string : 'a t -> 'a t -> bool t
-
     (** {1 Constants}*)
 
     (** The following functions define constant value expressions.
@@ -727,6 +725,8 @@ module Postgres : sig
     val abs_gen : 'a Type.Numeric.t -> 'a t -> 'a t
 
     (** {1 String functiosn}*)
+
+    val jsonb_contains_string : 'a t -> string t -> bool t
 
     val concat : string t list -> string t
 

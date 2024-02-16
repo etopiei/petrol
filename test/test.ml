@@ -6,6 +6,7 @@ type affiliation =
   ; test : string
   }
 
+let string_of_query q = Format.asprintf "%a" Query.pp q
 
 let () =
   let a = { id=3; test="3" } in
@@ -67,18 +68,26 @@ let test_order_by () =
     |> Query.order_by ~direction:`ASC id
     |> Query.order_by ~direction:`DESC time
   in
-
-  let query_str = Format.asprintf "%a" Query.pp query in
   
   Alcotest.(check string)
     "same"
-    query_str
+    (string_of_query query)
     "SELECT affiliation.id\nFROM affiliation\nORDER BY affiliation.time DESC, affiliation.id ASC"
+
+let test_jsonb_contains_string () =
+  let query = Query.select ~from:affiliation [id]
+    |> Query.where Expr.(jsonb_contains_string time (s "sfa"))
+  in
+  Alcotest.(check string)
+    "same"
+    (string_of_query query)
+    ""
 
 let () =
   let open Alcotest in
   run "Queries" [
       "affiliation table", [
           test_case "find_affiliation" `Quick test_order_by;
+          test_case "test_jsonb_contains_string" `Quick test_jsonb_contains_string
         ];
     ]
