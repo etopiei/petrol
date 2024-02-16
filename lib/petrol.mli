@@ -726,7 +726,7 @@ module Postgres : sig
 
     (** {1 String functiosn}*)
 
-    val jsonb_contains_string : 'a t -> string t -> bool t
+    val (??) : 'a t -> string t -> bool t
 
     val concat : string t list -> string t
 
