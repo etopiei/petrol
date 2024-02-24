@@ -1008,6 +1008,10 @@ module Query : sig
     'a Expr.expr_list -> from:table_name -> ('a, [> `SELECT_CORE ]) t
   (** [select fields ~from] corresponds to the SQL [SELECT {fields} FROM {from}]. *)
 
+  val select' :
+    'a Types.expr_list -> from:Types.table_name ->
+    ('a Types.expr_list -> ('a, [> `SELECT_CORE ]) t -> 'b) -> 'b
+
   val update :
     table:table_name -> set:Expr.wrapped_assign list -> (unit, [> `UPDATE ]) t
   (** [update ~table ~set] corresponds to the SQL [UPDATE {set} FROM {table}]. *)

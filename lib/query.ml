@@ -60,6 +60,14 @@ let select exprs ~from:table_name =
     exprs; join=[]; table=table_name; where=None;
     group_by=None; having=None;
   }
+
+let select' exprs ~from:table_name fn =
+  let q = Types.SELECT_CORE {
+    exprs; join=[]; table=table_name; where=None;
+    group_by=None; having=None;
+  } in
+  fn exprs q
+
 let update ~table:table_name ~set =
   Types.UPDATE { table=table_name; on_err=None; where=None; set; returning = [] }
 let insert ~table:table_name ~values:set =
