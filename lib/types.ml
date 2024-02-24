@@ -49,13 +49,14 @@ type 'a expr_list =
 
 and wrapped_assign = ASSIGN : 'a field * 'a expr -> wrapped_assign
 and (_, !'res) query =
-    | SELECT_CORE : {
+  | SELECT_CORE : {
       exprs: 'a expr_list;
       table: table_name;
       join: join list;
       where: bool expr option;
       group_by: 'b expr_list option;
       having: bool expr option;
+      as_: string option;
     } -> ('a, [> `SELECT_CORE] as 'res) query
   | SELECT : {
       core: ('a, [< `SELECT_CORE ]) query;
@@ -133,7 +134,6 @@ let rec ty_expr_list : 'a . 'a expr_list -> 'a Type.ty_list =
   | h :: t ->
     Cons (ty_expr h, ty_expr_list t)
 
-
 type 'a expr +=
   | NULL : 'a option Type.t -> 'a option expr
   | CONST : 'a * 'a Type.t -> 'a expr
@@ -142,6 +142,14 @@ type 'a expr +=
   | COERCETO: 'a expr * 'b Type.t -> 'b expr
   | REF : string * 'a Type.t -> 'a expr
   | AS: 'a expr * string -> 'a expr
+
+let rec field_expr_list : 'a . table_name:string -> 'a expr_list -> 'a expr_list =
+  fun (type a) ~table_name (ls: a expr_list) : a expr_list ->
+  match ls with
+  | [] -> []
+  | (FIELD (_, name, ty)) :: tl ->
+    FIELD ((0, table_name), name, ty) :: field_expr_list ~table_name tl
+  | _ -> failwith "fields only !"
 
 let () = add_printer @@ fun pp -> {
   pp_expr=fun (type a) fmt (expr: a expr) ->
@@ -220,9 +228,9 @@ and pp_query: 'a 'b. Format.formatter ->
   ('a, 'b) query -> unit =
   fun fmt (type a b) (query: (a,b) query) ->
   (match query with
-   | SELECT_CORE { exprs; table; join; where; group_by; having } ->
+   | SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
      Format.fprintf fmt
-       "SELECT %a\nFROM %s%a%a%a%a"
+       "(SELECT %a\nFROM %s%a%a%a%a)%a"
        pp_expr_list exprs
        (snd table)
        pp_join_list join
@@ -237,9 +245,12 @@ and pp_query: 'a 'b. Format.formatter ->
           Format.fprintf fmt "HAVING %a"
             pp_expr vl))
        having
-   | SELECT { core; order_by; limit; offset } ->
-     Format.fprintf fmt "%a%a%a%a"
-       pp_query core
+       (pp_opt (fun fmt vl ->
+          Format.fprintf fmt " AS %s" vl))
+       as_
+   | SELECT { core=SELECT_CORE core; order_by; limit; offset } ->
+     Format.fprintf fmt "(%a%a%a%a)%a"
+       pp_query (SELECT_CORE { core with as_=None })
        (pp_opt (fun fmt xs ->
           Format.fprintf fmt "ORDER BY %a"
             pp_order_list xs))
@@ -250,6 +261,9 @@ and pp_query: 'a 'b. Format.formatter ->
        (pp_opt (fun fmt vl ->
           Format.fprintf fmt "OFFSET %a" pp_expr vl))
        offset
+       (pp_opt (fun fmt vl ->
+          Format.fprintf fmt "AS %s" vl))
+       core.as_
    | DELETE { table; where; returning } ->
      Format.fprintf fmt "DELETE FROM %s%a%a"
        (snd table)
@@ -288,7 +302,7 @@ and pp_query: 'a 'b. Format.formatter ->
      | TABLE { table } -> Format.fprintf fmt "%s" (snd table)
   )
 and pp_join : int -> Format.formatter -> join -> unit =
-  fun n fmt (MkJoin { table; on; join_op }) ->
+  fun _n fmt (MkJoin { table; on; join_op }) ->
   match table with
   | TABLE { table } -> 
       Format.fprintf fmt "%a %s ON %a"
@@ -296,9 +310,9 @@ and pp_join : int -> Format.formatter -> join -> unit =
         (snd table)
         pp_expr on
   | _ -> 
-      Format.fprintf fmt "%a (%a) AS join_tmp_%d ON %a"
+      Format.fprintf fmt "%a (%a) ON %a"
         pp_join_op join_op
-        pp_query table n
+        pp_query table
         pp_expr on
 and pp_join_list : Format.formatter -> join list -> unit =
   fun fmt ls ->
@@ -330,7 +344,7 @@ and values_order_list : type a. wrapped_value list -> a Order.t -> wrapped_value
 and query_values : 'a 'b. wrapped_value list -> ('a,'b) query -> wrapped_value list =
   fun acc (type a b) (query: (a,b) query) ->
   match query with
-  | SELECT_CORE { exprs; table=_; join; where; group_by; having } ->
+  | SELECT_CORE { exprs; table=_; join; where; group_by; having; as_=_ } ->
     let acc = values_expr_list acc exprs in
     let acc = List.fold_left (fun acc (MkJoin {table; on; join_op=_}) ->
       let acc = query_values acc table in

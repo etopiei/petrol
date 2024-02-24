@@ -35,7 +35,6 @@ type ('a,'b,'c) on_conflict_fun =
   -> ('c, 'a) t
   constraint 'a = ([> `INSERT]) as 'a
 
-
 let query_values query = List.rev (Types.query_values [] query)
 
 let pp = Types.pp_query
@@ -44,10 +43,10 @@ let show q = Format.asprintf "%a" pp q
 let query_ret_ty: 'a 'b. ('a,'b) t -> 'a Type.ty_list =
   fun (type a b) (query: (a,b) t) : a Type.ty_list ->
   match query with
-  | SELECT_CORE { exprs; table=_; join=_; where=_; group_by=_; having=_ } ->
+  | SELECT_CORE { exprs; table=_; join=_; where=_; group_by=_; having=_; as_=_ } ->
     Expr.ty_expr_list exprs
   | SELECT { core=
-               SELECT_CORE { exprs; table=_; join=_; where=_; group_by=_; having=_ };
+    SELECT_CORE { exprs; table=_; join=_; where=_; group_by=_; having=_; as_=_};
              order_by=_; limit=_; offset=_ } ->
     Expr.ty_expr_list exprs      
   | DELETE { returning; _ } -> Expr.ty_expr_list returning
@@ -58,15 +57,15 @@ let query_ret_ty: 'a 'b. ('a,'b) t -> 'a Type.ty_list =
 let select exprs ~from:table_name =
   Types.SELECT_CORE {
     exprs; join=[]; table=table_name; where=None;
-    group_by=None; having=None;
+    group_by=None; having=None; as_=None;
   }
 
-let select' exprs ~from:table_name fn =
+let select_as exprs ~from:table_name ~as_ =
   let q = Types.SELECT_CORE {
     exprs; join=[]; table=table_name; where=None;
-    group_by=None; having=None;
+    group_by=None; having=None; as_=Some as_;
   } in
-  fn exprs q
+  Types.field_expr_list ~table_name:as_ exprs, q
 
 let update ~table:table_name ~set =
   Types.UPDATE { table=table_name; on_err=None; where=None; set; returning = [] }
@@ -82,12 +81,12 @@ let where : ('a,'c) where_fun
         None -> Some by
       | Some old_by -> Some Expr.Common.(by && old_by) in
     match table with
-    | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
+    | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
       let where = update_where where by in
-      SELECT_CORE { exprs; table; join; where; group_by; having }
-    | Types.SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; order_by; limit; offset } ->
+      SELECT_CORE { exprs; table; join; where; group_by; having; as_ }
+    | Types.SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; order_by; limit; offset } ->
       let where = update_where where by in
-      SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; order_by; limit; offset }
+      SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; order_by; limit; offset }
     | Types.DELETE ({ where ; _ } as query) ->
       let where = update_where where by in
       DELETE { query with where }
@@ -100,10 +99,10 @@ let where : ('a,'c) where_fun
 let group_by : ('a,'b,'c) group_by_fun =
   fun by (type a b) (table : (b, a) t) : (b, a) t ->
   match table with
-  | Types.SELECT_CORE { exprs; table; join; where; group_by=_; having } ->
-    SELECT_CORE { exprs; table; join; where; group_by=Some by; having }
-  | Types.SELECT { core=SELECT_CORE { exprs; table; join; where; group_by=_; having }; order_by; limit; offset } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by=Some by; having }; order_by; limit; offset }
+  | Types.SELECT_CORE { exprs; table; join; where; group_by=_; having; as_ } ->
+    SELECT_CORE { exprs; table; join; where; group_by=Some by; having; as_ }
+  | Types.SELECT { core=SELECT_CORE { exprs; table; join; where; group_by=_; having; as_ }; order_by; limit; offset } ->
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by=Some by; having; as_ }; order_by; limit; offset }
   | Types.DELETE _ 
   | Types.UPDATE _ 
   | Types.INSERT _
@@ -112,10 +111,10 @@ let group_by : ('a,'b,'c) group_by_fun =
 let having : ('a,'c) having_fun =
   fun having (type a b) (table : (b, a) t) : (b, a) t ->
   match table with
-  | Types.SELECT_CORE { exprs; table; join; where; group_by; having=_ } ->
-    SELECT_CORE { exprs; table; join; where; group_by; having=Some having }
-  | Types.SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having=_ }; order_by; limit; offset } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having=Some having }; order_by; limit; offset }
+  | Types.SELECT_CORE { exprs; table; join; where; group_by; having=_; as_ } ->
+    SELECT_CORE { exprs; table; join; where; group_by; having=Some having; as_ }
+  | Types.SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having=_; as_ }; order_by; limit; offset } ->
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having=Some having; as_ }; order_by; limit; offset }
   | Types.DELETE _ 
   | Types.UPDATE _ 
   | Types.INSERT _
@@ -125,7 +124,7 @@ let join : ('a,'b,'d,'c) join_fun =
   fun ?(op=INNER) ~on (type a b c) (ot: (b, _) t)
     (table : (c, a) t)  ->
     match table with
-    | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
+    | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
       Types.SELECT_CORE {
         exprs; table;
         join=join @ [MkJoin {
@@ -133,7 +132,7 @@ let join : ('a,'b,'d,'c) join_fun =
           on;
           join_op=op
         }];
-        where; group_by; having
+        where; group_by; having; as_
       }
     | Types.SELECT _
     | Types.DELETE _ 
@@ -165,8 +164,6 @@ let on_conflict : 'a . [ `DO_NOTHING ] -> ('c, 'a) t -> ('c, 'a) t =
   | Types.INSERT query ->
     INSERT { query with on_conflict = Some on_conflict }
 
-
-
 let table (table: Types.table_name) : (_, [>`TABLE]) t =
   Types.TABLE { table }
 
@@ -176,8 +173,8 @@ let limit :
   ('a, [> `SELECT ]) t =
   fun (type a i) by (table: (a, i) t) : (a, [> `SELECT]) t ->
   match table with
-  | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=Some by; offset=None; order_by=None}
+  | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; limit=Some by; offset=None; order_by=None}
   | Types.SELECT { core; order_by; limit=_; offset } ->
     SELECT { core; order_by; limit=Some by; offset }
   | DELETE _
@@ -191,8 +188,8 @@ let offset :
   ('a, [> `SELECT ]) t =
   fun (type a i) by (table: (a, i) t) : (a, [> `SELECT]) t ->
   match table with
-  | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=Some by; order_by=None}
+  | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; limit=None; offset=Some by; order_by=None}
   | Types.SELECT { core; order_by; limit; offset=_ } ->
     SELECT { core; order_by; limit; offset=Some by }
   | DELETE _
@@ -206,8 +203,8 @@ let order_by :
   ('a, [> `SELECT ]) t =
   fun (type a b) ?(direction=`ASC) field (table: (a, b) t) : (a, [> `SELECT]) t ->
   match table with
-  | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
-      SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=None; order_by=Some [direction, field]}
+  | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; limit=None; offset=None; order_by=Some [direction, field]}
   | Types.SELECT { core; order_by=order_by_prev; limit; offset } ->
     let order_by = match order_by_prev with
     | None -> Some Types.Order.[direction, field]
@@ -224,8 +221,8 @@ let order_by_ :
   ('a, [> `SELECT ]) t =
   fun (type a b) order_list (table: (a, b) t) : (a, [> `SELECT]) t ->
   match table with
-  | Types.SELECT_CORE { exprs; table; join; where; group_by; having } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having }; limit=None; offset=None; order_by=Some order_list}
+  | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; limit=None; offset=None; order_by=Some order_list}
   | Types.SELECT { core; order_by=_; limit; offset } ->
     SELECT { core; order_by= Some order_list; limit; offset }
   | DELETE _

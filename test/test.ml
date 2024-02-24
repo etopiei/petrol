@@ -15,7 +15,7 @@ let () =
 
 let uuid = Petrol.Type.custom ~ty:Caqti_type.string ~repr:"uuid"
 
-let affiliation, Expr.[id; _test; _referee_id; time] =
+let affiliation, Expr.[id; test; _referee_id; time] =
   StaticSchema.declare_table
     ~constraints:[Schema.table_unique ["referree_id"; "referred_id"]]
     ~name:"affiliation"
@@ -26,6 +26,7 @@ let affiliation, Expr.[id; _test; _referee_id; time] =
       field "time" ~ty:Type.time ~constraints:[not_null ()]
     ]
 
+(*
 let () =
   Schema.to_sql
     ~name:"affiliation"
@@ -36,8 +37,9 @@ let () =
     ]
     [Schema.table_unique ["referree_id"; "referred_id"]]
   |> print_endline
+*)
 
-  (*
+(*
 let test_find_affiliation () =
   let query gt = Query.select ~from:affiliation [id]
     |> Query.where Expr.((id > i gt) && (test = s_opt None) && ((word_similarity (s "a") (s "b") = f 1.0)))
@@ -61,7 +63,7 @@ let test_find_affiliation () =
     "same string"
     (Format.asprintf "%a" Query.pp (query 3))
     "SELECT affiliation.id\nFROM affiliation\nWHERE affiliation.id > ?"
-  *)
+*)
 
 let test_order_by () =
   let query = Query.select ~from:affiliation [id]
@@ -72,22 +74,34 @@ let test_order_by () =
   Alcotest.(check string)
     "same"
     (string_of_query query)
-    "SELECT affiliation.id\nFROM affiliation\nORDER BY affiliation.time DESC, affiliation.id ASC"
+    "((SELECT affiliation.id\nFROM affiliation)\nORDER BY affiliation.time DESC, affiliation.id ASC)"
 
 let test_jsonb_contains_string () =
   let query = Query.select ~from:affiliation [id]
-    |> Query.where Expr.(jsonb_contains_string time (s "sfa"))
+    |> Query.where Expr.(jsonb_exists time (s "sfa"))
   in
   Alcotest.(check string)
     "same"
     (string_of_query query)
-    ""
+    "(SELECT affiliation.id\nFROM affiliation\nWHERE jsonb_exists(affiliation.time, ?))"
+
+let test_temp_query () =
+  let query = Query.select ~from:affiliation [id]
+    |> fun q ->
+      let Expr.[test'], q' = Query.select_as ~from:affiliation [test] ~as_:"temp_0" in
+      Query.join q' q ~on:(Expr.(test' = s_opt (Some "a")))
+  in
+  Alcotest.(check string)
+    "same"
+    (string_of_query query)
+    "(SELECT affiliation.id\nFROM affiliation INNER JOIN ((SELECT affiliation.test\nFROM affiliation)\n AS temp_0) ON temp_0.test = ?)"
 
 let () =
   let open Alcotest in
   run "Queries" [
       "affiliation table", [
           test_case "find_affiliation" `Quick test_order_by;
-          test_case "test_jsonb_contains_string" `Quick test_jsonb_contains_string
+          test_case "test_jsonb_contains_string" `Quick test_jsonb_contains_string;
+          test_case "test_temp_query" `Quick test_temp_query;
         ];
     ]
