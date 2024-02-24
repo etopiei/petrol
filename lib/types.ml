@@ -310,7 +310,7 @@ and pp_join : int -> Format.formatter -> join -> unit =
         (snd table)
         pp_expr on
   | _ -> 
-      Format.fprintf fmt "%a (%a) ON %a"
+      Format.fprintf fmt "%a %a ON %a"
         pp_join_op join_op
         pp_query table
         pp_expr on

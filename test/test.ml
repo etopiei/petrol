@@ -94,7 +94,7 @@ let test_temp_query () =
   Alcotest.(check string)
     "same"
     (string_of_query query)
-    "(SELECT affiliation.id\nFROM affiliation INNER JOIN ((SELECT affiliation.test\nFROM affiliation)\n AS temp_0) ON temp_0.test = ?)"
+    "(SELECT affiliation.id\nFROM affiliation INNER JOIN (SELECT affiliation.test\nFROM affiliation)\n AS temp_0 ON temp_0.test = ?)"
 
 let () =
   let open Alcotest in
