@@ -160,7 +160,10 @@ let () = add_printer @@ fun pp -> {
     | FIELD (table_name, field_name, _) ->
       let table_name = snd table_name in
       Format.fprintf fmt "%s.%s" table_name field_name
-    | COERCETO (expr, _) -> pp_expr fmt expr
+    | COERCETO (expr, ty) ->
+      Format.fprintf fmt "CAST(%a AS %s)"
+        pp_expr expr
+        (Type.show ty)
     | REF (name,_) -> Format.fprintf fmt "%s" name
     | AS (expr, name) -> Format.fprintf fmt "%a AS %s" pp_expr expr name
     | _ -> pp.pp_expr fmt expr
