@@ -96,6 +96,12 @@ let test_temp_query () =
     (string_of_query query)
     "(SELECT affiliation.id\nFROM affiliation INNER JOIN (SELECT affiliation.test\nFROM affiliation)\n AS temp_0 ON temp_0.test = ?)"
 
+let test_temp_string () =
+  Alcotest.(check string)
+    "same"
+    (string_of_query (Query.select ~from:affiliation [Expr.s_stat "static"]))
+    "(SELECT $esc$static$esc$\nFROM affiliation)"
+
 let () =
   let open Alcotest in
   run "Queries" [
@@ -103,5 +109,6 @@ let () =
           test_case "find_affiliation" `Quick test_order_by;
           test_case "test_jsonb_contains_string" `Quick test_jsonb_contains_string;
           test_case "test_temp_query" `Quick test_temp_query;
+          test_case "test_tedmp_string" `Quick test_temp_string;
         ];
     ]
