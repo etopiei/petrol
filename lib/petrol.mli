@@ -24,6 +24,11 @@ module Expr : sig
 
   type ordering = [`ASC | `DESC]
 
+  type 'a on_conflict =
+    [ `DO_NOTHING
+    | `UPDATE of 'a t * wrapped_assign list
+    ]
+
   (** Represents a heterogeneous sequence of SQL expressions. *)
   type _ expr_list =
     | [] : unit expr_list
@@ -998,9 +1003,8 @@ module Query : sig
       only works for Sqlite3, use {!on_conflict} for portability when
       possible). *)
 
-  type ('a, 'b, 'c) on_conflict_fun = 'b -> ('c, 'a) t -> ('c, 'a) t
+  type ('a, 'b, 'c) on_conflict_fun = 'b Expr.on_conflict -> ('c, 'a) t -> ('c, 'a) t
     constraint 'a = [> `INSERT ]
-    constraint 'b = [< `DO_NOTHING ]
   (** [('a,'b,'c) on_conflict_fun] defines the type of an SQL function
       that corresponds to SQL's ON CONFLICT clause.  *)
 
@@ -1043,7 +1047,7 @@ module Query : sig
   val on_err : ([< `INSERT | `UPDATE ], [ `ABORT | `FAIL | `IGNORE | `REPLACE | `ROLLBACK ], unit) on_err_fun
   (** [on_err err expr] corresponds to the SQL [{expr} ON ERR {err}].  *)
 
-  val on_conflict : ([< `INSERT ], [ `DO_NOTHING ], unit) on_conflict_fun
+  val on_conflict : ([< `INSERT ], 'b, unit) on_conflict_fun
   (** [on_conflict err expr] corresponds to the SQL [{expr} ON CONFLICT {err}] expression.  *)
 
 

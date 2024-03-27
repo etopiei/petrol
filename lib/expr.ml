@@ -16,6 +16,11 @@ end
 
 type wrapped_assign = Types.wrapped_assign
 
+type 'a on_conflict =
+  [ `DO_NOTHING
+  | `UPDATE of 'a t * wrapped_assign list
+  ]
+
 type wrapped_value =
   Types.wrapped_value = MkWrapped: 'a Type.t * 'a -> wrapped_value
 

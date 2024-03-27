@@ -102,6 +102,15 @@ let test_temp_string () =
     (string_of_query (Query.select ~from:affiliation [Expr.s_stat "static"]))
     "(SELECT $esc$static$esc$\nFROM affiliation)"
 
+let test_insert_on_conflict () =
+  let q =
+    Query.insert ~table:affiliation ~values:Expr.[test <== Some "a"]
+    |> Query.on_conflict (`UPDATE (test, Expr.[test <== Some "b"])) in
+  Alcotest.(check string)
+    "same"
+    (string_of_query q)
+    "INSERT INTO affiliation (test) VALUES (?)\nON CONFLICT test DO UPDATE SET test = ?"
+
 let () =
   let open Alcotest in
   run "Queries" [
@@ -110,5 +119,6 @@ let () =
           test_case "test_jsonb_contains_string" `Quick test_jsonb_contains_string;
           test_case "test_temp_query" `Quick test_temp_query;
           test_case "test_tedmp_string" `Quick test_temp_string;
+          test_case "test_insert_on_conflict" `Quick test_insert_on_conflict;
         ];
     ]

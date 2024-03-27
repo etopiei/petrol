@@ -30,7 +30,7 @@ type ('a,'b,'c) on_err_fun =
   constraint 'a = ([> `UPDATE | `INSERT]) as 'a
 
 type ('a,'b,'c) on_conflict_fun =
-  ([< `DO_NOTHING ] as 'b) ->
+  'b Expr.on_conflict ->
   ('c, 'a) t
   -> ('c, 'a) t
   constraint 'a = ([> `INSERT]) as 'a
@@ -153,7 +153,7 @@ let on_err : 'a . [`ABORT | `FAIL | `IGNORE | `REPLACE | `ROLLBACK ] -> ('c, 'a)
   | Types.INSERT query ->
     INSERT { query with on_err = Some on_err }
 
-let on_conflict : 'a . [ `DO_NOTHING ] -> ('c, 'a) t -> ('c, 'a) t =
+let on_conflict : 'a . 'b Types.on_conflict -> ('c, 'a) t -> ('c, 'a) t =
   fun on_conflict (type a) (table : (_, a) t) : (_, a) t ->
   match table with
   | Types.SELECT_CORE _

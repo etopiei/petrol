@@ -25,10 +25,6 @@ let pp_on_err : Format.formatter -> [ `ABORT | `FAIL | `IGNORE | `REPLACE | `ROL
     | `FAIL -> Format.fprintf fmt "OR FAIL"
     | `ROLLBACK -> Format.fprintf fmt "OR ROLLBACK"
 
-let pp_on_conflict : Format.formatter -> [ `DO_NOTHING ] -> unit =
-  fun fmt -> function
-    | `DO_NOTHING -> Format.fprintf fmt "ON CONFLICT DO NOTHING"
-
 let pp_opt f fmt = function
   | None -> ()
   | Some vl -> Format.fprintf fmt "\n%a" f vl
@@ -46,6 +42,11 @@ end
 type 'a expr_list =
   | [] : unit expr_list
   | (::) : ('a expr * 'b expr_list) -> ('a * 'b) expr_list
+
+and 'a on_conflict =
+  [ `DO_NOTHING
+  | `UPDATE of ('a expr) * wrapped_assign list
+  ]
 
 and wrapped_assign = ASSIGN : 'a field * 'a expr -> wrapped_assign
 and (_, !'res) query =
@@ -79,7 +80,7 @@ and (_, !'res) query =
   | INSERT : {
     table: table_name;
     on_err: [`ABORT | `FAIL | `IGNORE | `REPLACE | `ROLLBACK ] option;
-    on_conflict: [`DO_NOTHING] option;
+    on_conflict: _ on_conflict option;
     set: wrapped_assign list;
     returning: 'a expr_list;
   } -> ('a, [> `INSERT] as 'res) query
@@ -210,6 +211,16 @@ and pp_returning : 'a. Format.formatter -> 'a expr_list -> unit =
   fun fmt ->
     pp_opt_expr_list
       (fun fmt -> Format.fprintf fmt "RETURNING %a" pp_expr_list) fmt
+
+and pp_on_conflict : type a. Format.formatter -> a on_conflict -> unit =
+  fun fmt -> function
+    | `DO_NOTHING -> Format.fprintf fmt "ON CONFLICT DO NOTHING"
+    | `UPDATE (FIELD (_, conflict_target, _), set) ->
+      Format.fprintf fmt "ON CONFLICT %s DO UPDATE SET %a"
+        conflict_target
+        (Format.pp_print_list ~pp_sep:(fun fmt () ->
+          Format.fprintf fmt ", ") pp_wrapped_assign) set
+    | _ -> failwith "unsupported on conflict"
 
 and pp_order_list_inner : type a. Format.formatter -> a Order.t -> unit = fun fmt ->
   function
