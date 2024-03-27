@@ -216,7 +216,7 @@ and pp_on_conflict : type a. Format.formatter -> a on_conflict -> unit =
   fun fmt -> function
     | `DO_NOTHING -> Format.fprintf fmt "ON CONFLICT DO NOTHING"
     | `UPDATE (FIELD (_, conflict_target, _), set) ->
-      Format.fprintf fmt "ON CONFLICT %s DO UPDATE SET %a"
+      Format.fprintf fmt "ON CONFLICT (%s) DO UPDATE SET %a"
         conflict_target
         (Format.pp_print_list ~pp_sep:(fun fmt () ->
           Format.fprintf fmt ", ") pp_wrapped_assign) set

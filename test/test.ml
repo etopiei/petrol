@@ -109,7 +109,7 @@ let test_insert_on_conflict () =
   Alcotest.(check string)
     "same"
     (string_of_query q)
-    "INSERT INTO affiliation (test) VALUES (?)\nON CONFLICT test DO UPDATE SET test = ?"
+    "INSERT INTO affiliation (test) VALUES (?)\nON CONFLICT (test) DO UPDATE SET test = ?"
 
 let () =
   let open Alcotest in
