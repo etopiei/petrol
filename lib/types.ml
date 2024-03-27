@@ -385,12 +385,19 @@ and query_values : 'a 'b. wrapped_value list -> ('a,'b) query -> wrapped_value l
     let acc = Option.map (values_expr acc) where |> Option.value ~default:acc in
     let acc = values_expr_list acc returning in
     acc
-  | INSERT { table=_; on_err=_; on_conflict=_; set ; returning } ->
+  | INSERT { table=_; on_err=_; on_conflict; set ; returning } ->
     let acc = List.fold_left (fun acc (ASSIGN (vl, _)) ->
       values_expr acc (FIELD vl)) acc set in
     let acc = List.fold_left (fun acc (ASSIGN (_, expr)) ->
       values_expr acc expr) acc set in
     let acc = values_expr_list acc returning in
+    let acc = match on_conflict with
+    | Some (`UPDATE (target, set)) ->
+      let acc = values_expr acc target in
+      List.fold_left (fun acc (ASSIGN (vl, expr)) ->
+        values_expr (values_expr acc (FIELD vl)) expr) acc set
+    | _ -> acc
+    in
     acc
   | TABLE _ -> 
       (* Since TABLE adds no new values (only created on joins),
