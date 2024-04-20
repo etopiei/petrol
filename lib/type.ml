@@ -45,7 +45,6 @@ module Numeric = struct
 end
 
 module Postgres = struct
-
   type 'a witness += BIGINT : int64 witness
   let big_int = CUSTOM { ty = Caqti_type.int64; repr = "BIGINT"; witness=BIGINT;
                          eq_witness={eq=

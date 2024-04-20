@@ -34,6 +34,8 @@ module Expr : sig
     | [] : unit expr_list
     | (::) : ('a t * 'b expr_list) -> ('a * 'b) expr_list
 
+  val ty_expr_list : 'a expr_list -> 'a Type.ty_list
+
   module Order : sig
     type 'a t' = 'a t
     type 'a t =
@@ -55,10 +57,17 @@ module Type : sig
   type 'a t
   (** Represents an SQL data type that maps to an OCaml type ['a]. *)
 
+  type _ ty_list =
+    | Nil : unit ty_list
+    | Cons : 'a t * 'b ty_list -> ('a * 'b) ty_list
+
   val pp: Format.formatter -> 'a t -> unit
   val show : 'a t -> string
 
   val null_ty : 'a. 'a t -> 'a option t
+
+  val ty_to_caqti_ty : 'a. 'a Type.t -> 'a Caqti_type.t
+  val ty_list_to_caqti_ty : 'a. 'a Type.ty_list -> 'a Caqti_type.t
 
   val custom : ty:'a Caqti_type.t -> repr:string -> 'a t
   (** [custom ~ty ~repr] creates a new SQL type that is represented by
@@ -485,7 +494,6 @@ module Postgres : sig
     (** [nullable] represents a nullable SQL field type, which generates an option *)
 
     module Numeric = Type.Numeric
-
   end 
 
 
