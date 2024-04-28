@@ -150,7 +150,7 @@ let rec field_expr_list : 'a . table_name:string -> 'a expr_list -> 'a expr_list
   | [] -> []
   | (FIELD (_, name, ty)) :: tl ->
     FIELD ((0, table_name), name, ty) :: field_expr_list ~table_name tl
-  | _ -> failwith "fields only !"
+  | expr :: tl -> expr :: field_expr_list ~table_name tl
 
 let () = add_printer @@ fun pp -> {
   pp_expr=fun (type a) fmt (expr: a expr) ->
