@@ -111,6 +111,16 @@ let test_insert_on_conflict () =
     (string_of_query q)
     "INSERT INTO affiliation (test) VALUES (?)\nON CONFLICT (test) DO UPDATE SET test = ?"
 
+let test_order_by_nulls () =
+  let q = Query.select ~from:affiliation [id]
+    |> Query.order_by ~direction:`ASC ~nulls:`FIRST id
+    |> Query.order_by ~direction:`ASC ~nulls:`LAST time
+  in
+  Alcotest.(check string)
+    "same"
+    (string_of_query q)
+    "((SELECT affiliation.id\nFROM affiliation)\nORDER BY affiliation.time ASC nulls last, affiliation.id ASC nulls first)"
+
 let () =
   let open Alcotest in
   run "Queries" [
@@ -120,5 +130,6 @@ let () =
           test_case "test_temp_query" `Quick test_temp_query;
           test_case "test_tedmp_string" `Quick test_temp_string;
           test_case "test_insert_on_conflict" `Quick test_insert_on_conflict;
+          test_case "test_order_by_nulls" `Quick test_order_by_nulls;
         ];
     ]

@@ -198,17 +198,17 @@ let offset :
   | TABLE _ -> invalid_arg "offset only supported for select"
 
 let order_by :
-  'a 'b. ?direction:[ `ASC | `DESC ] ->
+  'a 'b. ?direction:[ `ASC | `DESC ] -> ?nulls:[ `FIRST | `LAST ] ->
   'c Types.expr -> ('a, [< `SELECT | `SELECT_CORE] as 'b) t ->
   ('a, [> `SELECT ]) t =
-  fun (type a b) ?(direction=`ASC) field (table: (a, b) t) : (a, [> `SELECT]) t ->
+  fun (type a b) ?(direction=`ASC) ?nulls field (table: (a, b) t) : (a, [> `SELECT]) t ->
   match table with
   | Types.SELECT_CORE { exprs; table; join; where; group_by; having; as_ } ->
-    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; limit=None; offset=None; order_by=Some [direction, field]}
+    SELECT { core=SELECT_CORE { exprs; table; join; where; group_by; having; as_ }; limit=None; offset=None; order_by=Some [direction, field, nulls]}
   | Types.SELECT { core; order_by=order_by_prev; limit; offset } ->
     let order_by = match order_by_prev with
-    | None -> Some Types.Order.[direction, field]
-    | Some xs -> Some Types.Order.((direction, field) :: xs)
+    | None -> Some Types.Order.[direction, field, nulls]
+    | Some xs -> Some Types.Order.((direction, field, nulls) :: xs)
     in
     SELECT { core; order_by; limit; offset }
   | DELETE _

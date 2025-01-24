@@ -38,9 +38,10 @@ module Expr : sig
 
   module Order : sig
     type 'a t' = 'a t
+    type nulls = [ `FIRST | `LAST ]
     type 'a t =
       | [] : unit t
-      | (::) : ((ordering * 'a t') * 'b t) -> unit t
+      | (::) : ((ordering * 'a t' * nulls option) * 'b t) -> unit t
   end
 
   val pp_expr_list : Format.formatter -> 'a expr_list -> unit
@@ -1071,7 +1072,7 @@ module Query : sig
   (** [offset count expr] corresponds to the SQL [{expr} OFFSET {fields}].  *)
 
   val order_by
-    : ?direction:[ `ASC | `DESC ] -> 'a Expr.t -> ('b, [< `SELECT | `SELECT_CORE ]) t -> ('b, [> `SELECT ]) t
+    : ?direction:[ `ASC | `DESC ] -> ?nulls:[ `FIRST | `LAST ] -> 'a Expr.t -> ('b, [< `SELECT | `SELECT_CORE ]) t -> ('b, [> `SELECT ]) t
   (** [order_by ?direction fields expr] corresponds to the SQL [{expr}
       ORDER BY {direction} {fields}].  *)
 

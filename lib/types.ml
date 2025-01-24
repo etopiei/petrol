@@ -34,9 +34,11 @@ type 'a field = table_name * string * 'a Type.t
 type 'a expr = .. 
 
 module Order = struct
+  type nulls = [ `FIRST | `LAST ]
+
   type 'a t =
     | [] : unit t
-    | (::) : ((ordering * 'a expr) * 'b t) -> unit t
+    | (::) : ((ordering * 'a expr * nulls option) * 'b t) -> unit t
 end
 
 type 'a expr_list =
@@ -222,20 +224,25 @@ and pp_on_conflict : type a. Format.formatter -> a on_conflict -> unit =
           Format.fprintf fmt ", ") pp_wrapped_assign) set
     | _ -> failwith "unsupported on conflict"
 
+and pp_order_nulls : Format.formatter -> Order.nulls option -> unit = fun fmt -> function
+  | None -> ()
+  | Some `FIRST -> Format.fprintf fmt " nulls first"
+  | Some `LAST -> Format.fprintf fmt " nulls last"
+
 and pp_order_list_inner : type a. Format.formatter -> a Order.t -> unit = fun fmt ->
   function
   | [] -> ()
-  | (ordering, expr) :: tl ->
-    Format.fprintf fmt ", %a %a%a"
-      pp_expr expr pp_ordering ordering
+  | (ordering, expr, nulls) :: tl ->
+    Format.fprintf fmt ", %a %a%a%a"
+      pp_expr expr pp_ordering ordering pp_order_nulls nulls
       pp_order_list_inner tl
 
 and pp_order_list : type a. Format.formatter -> a Order.t -> unit = fun fmt ->
   function
   | [] -> ()
-  | (ordering, expr) :: tl ->
-    Format.fprintf fmt "%a %a%a"
-      pp_expr expr pp_ordering ordering
+  | (ordering, expr, nulls) :: tl ->
+    Format.fprintf fmt "%a %a%a%a"
+      pp_expr expr pp_ordering ordering pp_order_nulls nulls
       pp_order_list_inner tl
 
 and pp_query: 'a 'b. Format.formatter ->
@@ -354,7 +361,7 @@ let rec values_expr_list :
 and values_order_list : type a. wrapped_value list -> a Order.t -> wrapped_value list =
   fun acc -> function
   | [] -> acc
-  | (_, expr) :: tl -> values_order_list (values_expr acc expr) tl
+  | (_, expr, _) :: tl -> values_order_list (values_expr acc expr) tl
 and query_values : 'a 'b. wrapped_value list -> ('a,'b) query -> wrapped_value list =
   fun acc (type a b) (query: (a,b) query) ->
   match query with

@@ -9,9 +9,11 @@ type 'a expr_list = 'a Types.expr_list =
 module Order = struct
   type 'a t' = 'a t
 
+  type nulls = [ `FIRST | `LAST ]
+
   type 'a t = 'a Types.Order.t =
     | [] : unit t
-    | (::) : ((ordering * 'a t') * 'b t) -> unit t
+    | (::) : ((ordering * 'a t' * nulls option) * 'b t) -> unit t
 end
 
 type wrapped_assign = Types.wrapped_assign
