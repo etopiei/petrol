@@ -1031,7 +1031,9 @@ module Query : sig
 
   val insert :
     table:table_name ->
-    values:Expr.wrapped_assign list -> (unit, [> `INSERT ]) t
+    values:Expr.wrapped_assign list -> 
+    returning:'a Expr.expr_list ->
+      ('a, [> `INSERT ]) t
   (** [insert ~table ~values] corresponds to the SQL [INSERT {values} INTO {table}]. *)
 
   val delete : from:table_name -> (unit, [> `DELETE ]) t
